@@ -21,6 +21,7 @@ PK8_KEY="${PREBUILTS}/signapk/keys/aosp_testkey.pk8"
 
 CREATE_FLASHABLE_ZIP()
 {
+    rm -rf "$WORKDIR" "$FW_BASE" "$WORKSPACE"
     local BUILD_DATE
     local ZIP_NAME_PREFIX
     local SUPER_IMAGE_PATH
@@ -52,9 +53,9 @@ CREATE_FLASHABLE_ZIP()
     cp -a "${PREBUILTS}/dynamic_installer/." "${ZIP_BUILD_DIR}/"
     mv "${SUPER_IMAGE_PATH}" "${ZIP_BUILD_DIR}/super.img"
 
-    cp "${DIROUT}"/*.img "${ZIP_BUILD_DIR}/" 2>/dev/null || true
+    mv "${DIROUT}"/*.img "${ZIP_BUILD_DIR}/" 2>/dev/null || true
 
-    [[ -f "${DIROUT}/param.bin" ]] && cp "${DIROUT}/param.bin" "${ZIP_BUILD_DIR}/"
+    [[ -f "${DIROUT}/param.bin" ]] && mv "${DIROUT}/param.bin" "${ZIP_BUILD_DIR}/"
 
     UPDATER_SCRIPT_PATH="${ZIP_BUILD_DIR}/META-INF/com/google/android/updater-script"
 
@@ -134,7 +135,6 @@ CREATE_FLASHABLE_ZIP()
     LOG_END "Flashable zip created at $(basename "${SIGNED_ZIP_PATH}")"
 }
 
-
 BUILD_SUPER_IMAGE()
 {
     local CONFIG_FILE="$WORKDIR/$STOCK_MODEL/unpack.conf"
@@ -189,6 +189,10 @@ REPACK_ROM()
 
     mkdir -p "$ASTROROM/out"
 
+    # Free unpacked source/extra firmware folders before repacking (keep $WORKDIR/$STOCK_MODEL/unpack.conf)
+    rm -rf "$FW_BASE" "$WORKDIR/$MODEL" "$WORKDIR/${EXTRA_MODEL:-}"
+    find "$WORKDIR/$STOCK_MODEL" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} + 2>/dev/null || true
+
     for PART_DIR in "$WORKSPACE"/*/; do
         local NAME=$(basename "$PART_DIR")
         local TARGET_FS="$TARGET_FILESYSTEM"
@@ -200,9 +204,10 @@ REPACK_ROM()
         fi
 
         REPACK_PARTITION "$NAME" "$TARGET_FS" "$DIROUT" "$WORKSPACE"
+        rm -rf "$PART_DIR"
     done
 
-    # Check if we should create a full zip or just the unpacked images for debugging. For instance , fastboot or recovery flash.
+    # Check if we should create a full zip or just the unpacked images for debugging.
     if GET_FEATURE DEBUG_BUILD; then
         LOG_INFO "ROM debug build enabled. Repacked images are available at $DIROUT"
     else

@@ -1,24 +1,22 @@
 #!/bin/bash
 #
-#  Copyright (c) 2025 Sameer Al Sahab
-#  Licensed under the MIT License. See LICENSE file for details.
+#  Copyright (c) 2025 Sameer Al Sahab
+#  Licensed under the MIT License. See LICENSE file for details.
 #
-#  Permission is hereby granted, free of charge, to any person obtaining a copy
-#  of this software and associated documentation files (the "Software"), to deal
-#  in the Software without restriction, including without limitation the rights
-#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-#  copies of the Software, and to permit persons to whom the Software is
-#  furnished to do so, subject to the following conditions:
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
 #
-#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
 #
 
 TARGET_PARTITIONS=(system product system_ext odm vendor_dlkm odm_dlkm system_dlkm vendor)
 CSC_SUB_PARTITIONS=(optics prism)
-
-
 
 DETECT_FILESYSTEM() {
     local IMG="$1"
@@ -39,7 +37,6 @@ DETECT_FILESYSTEM() {
 
     echo "unknown"
 }
-
 
 # https://source.android.com/docs/core/ota/dynamic_partitions
 EXTRACT_FIRMWARE()
@@ -62,7 +59,7 @@ EXTRACT_FIRMWARE()
 
     local FILE_STATE=$(_GET_FILE_STAT "$AP_PACKAGE")
 
-# [ Check if we need to extract or not ;)
+    # [ Check if we need to extract or not ;)
     if [[ -f "$CONF_FILE" ]]; then
         local CACHED_METADATA=$(source "$CONF_FILE" && echo "$METADATA")
 
@@ -71,12 +68,11 @@ EXTRACT_FIRMWARE()
             return 0
         fi
     fi
-# ]
+    # ]
 
     LOG_INFO "Unpacking $MODEL_NAME firmware..."
     rm -rf "${WORK_DIR:?}"/*
     mkdir -p "$WORK_DIR"
-
 
     local SUPER_IMG="${WORK_DIR}/super.img"
 
@@ -89,8 +85,8 @@ EXTRACT_FIRMWARE()
     SPARSE_TO_RAW "$SUPER_IMG" \
     || ERROR_EXIT "Sparse conversion failed for super.img"
 
-	# [ Get super image metadata and unpack the super image
-    #https://source.android.com/docs/core/ota/dynamic_partitions
+    # [ Get super image metadata and unpack the super image
+    # https://source.android.com/docs/core/ota/dynamic_partitions
     if [[ ! -f "$CONF_FILE" ]]; then
         local LPDUMP_OUT
         LPDUMP_OUT=$("$PREBUILTS/android-tools/lpdump" "$SUPER_IMG" 2>&1) || {
@@ -110,8 +106,7 @@ EXTRACT_FIRMWARE()
         ')
 
         if [[ -n "$SUPER_SIZE" && -n "$GROUP_NAME" ]]; then
-
-		cat > "$CONF_FILE" <<EOF
+            cat > "$CONF_FILE" <<EOF
 METADATA="$METADATA"
 SUPER_SIZE="$SUPER_SIZE"
 METADATA_SIZE="$METADATA_SIZE"
@@ -126,15 +121,13 @@ EOF
         fi
     fi
 
-
     RUN_CMD "Extracting partitions" \
             "\"$PREBUILTS/android-tools/lpunpack\" \"$SUPER_IMG\" \"$WORK_DIR/\""
     # ]
 
-
     local FOUND_PART_COUNT=0
     for PART in "${TARGET_PARTITIONS[@]}"; do
-	#https://source.android.com/docs/core/ota/ab
+        # https://source.android.com/docs/core/ota/ab
         for SUFFIX in "_a" ""; do
             local SRC_IMG="${WORK_DIR}/${PART}${SUFFIX}.img"
             local DST_IMG="${WORK_DIR}/${PART}.img"
@@ -148,9 +141,8 @@ EOF
             fi
         done
     done
-	# Remove empty B slots (Virtual A/B)
+    # Remove empty B slots (Virtual A/B)
     find "$WORK_DIR" -maxdepth 1 -type f -name "*_b.img" -delete
-
 
     # [ CSC Partitions
     if [[ -n "$CSC_PACKAGE" ]]; then
@@ -158,7 +150,7 @@ EOF
             local IMG_PATH="${WORK_DIR}/${PART}.img"
             if FETCH_FILE "$CSC_PACKAGE" "${PART}.img" "$WORK_DIR" >/dev/null 2>&1; then
                 SPARSE_TO_RAW "$IMG_PATH" \
-    || ERROR_EXIT "Cannot convert $IMG_PATH to raw"
+                || ERROR_EXIT "Cannot convert $IMG_PATH to raw"
                 UNPACK_PARTITION "$IMG_PATH" "$MODEL_NAME"
                 rm -f "$IMG_PATH"
                 ((FOUND_PART_COUNT++))
@@ -167,21 +159,19 @@ EOF
     fi
     # ]
 
-    # Extract boot.img and vendor_boot.img for kernel/module patching before AP_PACKAGE is deleted on CI
+    # Extract boot.img and vendor_boot.img for kernel/module patching before AP_PACKAGE is deleted
     if [[ "$FW_TYPE" == "stock" ]]; then
         mkdir -p "$WORK_DIR/kernel"
         FETCH_FILE "$AP_PACKAGE" "boot.img" "$WORK_DIR/kernel" >/dev/null 2>&1 || true
         FETCH_FILE "$AP_PACKAGE" "vendor_boot.img" "$WORK_DIR/kernel" >/dev/null 2>&1 || true
     fi
 
-    # Github runner have limited 72GB Storage only :(
-    if IS_GITHUB_ACTIONS; then 
-        rm -f "$AP_PACKAGE"
-        rm -rf "$SOURCE_DIR"
-        rm -f "$SUPER_IMG"
-        find "$WORK_DIR" -maxdepth 1 -type f -name "*.img" -delete
-    fi
-    
+    # Always delete raw super.img and downloaded tar.md5 archives to save ~70GB of runner storage
+    rm -f "$AP_PACKAGE"
+    rm -rf "$SOURCE_DIR"
+    rm -f "$SUPER_IMG"
+    find "$WORK_DIR" -maxdepth 1 -type f -name "*.img" -delete
+
     touch "$MARKER_FILE"
     LOG_END "Unpacked $MODEL_NAME firmware ($FOUND_PART_COUNT partitions)."
 }
@@ -207,7 +197,6 @@ UNPACK_PARTITION()
     local MNT=$(mktemp -d)
     trap 'umount "$MNT" &>/dev/null; rm -rf "$MNT"' RETURN
 
-
     case "$FS_TYPE" in
         "ext4") mount -o ro "$IMAGE_PATH" "$MNT" ;;
         "erofs") SILENT "$PREBUILTS/erofs-utils/fuse.erofs" "$IMAGE_PATH" "$MNT" ;;
@@ -215,32 +204,23 @@ UNPACK_PARTITION()
         *)      ERROR_EXIT "Unsupported filesystem: $FS_TYPE"; return 1 ;;
     esac
 
-
     cp -a -T "$MNT" "$DEST_DIR"
 
     # Generate Linux perms & SELinux contexts
-	#https://source.android.com/docs/security/features/selinux
-	#https://source.android.com/docs/security/features/selinux/implement
     LOG_INFO "Extracting links, modes & attrs from $PART_NAME"
 
-	# Generate fs_config: UID, GID, permissions, capabilities
-    # Format: <path> <uid> <gid> <mode> capabilities=<capability_mask>
     find "$MNT" | xargs stat -c "%n %u %g %a capabilities=0x0" > "$FS_CONFIG"
-
-	# Generate file_contexts: SELinux security contexts
-    # Format: <path> <selinux_context>
     find "$MNT" | xargs -I {} sh -c 'echo "{} $(getfattr -n security.selinux --only-values -h --absolute-names "{}")"' sh > "$FILE_CONT"
 
     sort -o "$FS_CONFIG" "$FS_CONFIG"
     sort -o "$FILE_CONT" "$FILE_CONT"
 
-
-    # [ System-as-root layout [/] | https://source.android.com/docs/core/architecture/partitions/system-as-root
+    # [ System-as-root layout [/]
     if [[ "$PART_NAME" == "system" ]] && [[ -d "$DEST_DIR/system" ]]; then
         sed -i -e "s|$MNT |/ |g" -e "s|$MNT||g" "$FILE_CONT"
         sed -i -e "s|$MNT | |g" -e "s|$MNT/||g" "$FS_CONFIG"
     else
-	    # Other common partition layout [PART_NAME/]
+        # Other common partition layout [PART_NAME/]
         sed -i "s|$MNT|/$PART_NAME|g" "$FILE_CONT"
         sed -i -e "s|$MNT | |g" -e "s|$MNT|$PART_NAME|g" "$FS_CONFIG"
         sed -i '1s|^|/ |' "$FS_CONFIG"
@@ -268,8 +248,6 @@ SPARSE_TO_RAW() {
     return 0
 }
 
-
-
 EXTRACT_ROM() {
     mkdir -p "$WORKDIR"
 
@@ -291,7 +269,6 @@ EXTRACT_ROM() {
         if [[ "$processed" =~ "$fw_id" ]]; then
             continue
         fi
-
 
         if [[ "$type" == "main" && "$BETA_ASSERT" == "1" ]]; then
             PATCH_BETA_FW "$m" "$c" || return 1

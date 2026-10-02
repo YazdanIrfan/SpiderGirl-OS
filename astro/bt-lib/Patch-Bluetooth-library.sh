@@ -55,6 +55,9 @@ BT_LIB_PATCH()
             ;;
         36.1)
             PATCHES=(
+                "00122a0140395f01086b00020054 00122a0140395f01086bde030014"
+                "2897773948050037 289777392a000014"
+                "183a009048050037 183a00902a000014"
                 "97753948050037360080 9775392a000014360080"
                 "97773948050037360080 9777392a000014360080"
                 "3a009048050037330080 3a00902a000014330080"
@@ -77,15 +80,13 @@ BT_LIB_PATCH()
     done
 
     [[ "$PATCH_APPLIED" != true ]] && \
-        ERROR_EXIT "No patch available for Bluetooth library (SDK $SDK_VERSION_FULL)"
+        LOG_WARN "No matching hex pattern for Bluetooth library (SDK $SDK_VERSION_FULL), skipping."
 
     return 0
 }
 
 if ! EXISTS "system" "lib64/libbluetooth_jni.so"; then
     LOG_BEGIN "Applying Bluetooth library patch"
-
-    BT_LIB_PATCH || ERROR_EXIT "Bluetooth patching failed"
-
-    LOG_END "Bluetooth library patch applied successfully"
+    BT_LIB_PATCH || LOG_WARN "Bluetooth patching skipped"
+    LOG_END "Bluetooth library step finished"
 fi

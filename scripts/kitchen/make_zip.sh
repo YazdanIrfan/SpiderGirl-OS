@@ -78,15 +78,28 @@ CREATE_FLASHABLE_ZIP()
         EXTRA_BLOCKS+=$'\nui_print "Installing Vendor Boot...";\nupdate_zip vendor_boot.img $(find_block vendor_boot);'
     fi
 
-    if [[ -f "${ZIP_BUILD_DIR}/vbmeta.img" ]]; then
-        EXTRA_BLOCKS+=$'\nui_print "Installing Patched VBMeta...";\nupdate_zip vbmeta.img $(find_block vbmeta);'
+    if [[ -f "${ZIP_BUILD_DIR}/A346B_vbmeta.img" ]]; then
+        EXTRA_BLOCKS+=$'\nMODEL_PROP=$(getprop ro.boot.em.model);'
+        EXTRA_BLOCKS+=$'\nif [ -z "$MODEL_PROP" ]; then MODEL_PROP=$(getprop ro.boot.bootloader); fi;'
+        EXTRA_BLOCKS+=$'\nVARIANT="";'
+        EXTRA_BLOCKS+=$'\ncase "$MODEL_PROP" in'
+        EXTRA_BLOCKS+=$'\n  *A346B*) VARIANT="A346B" ;;'
+        EXTRA_BLOCKS+=$'\n  *A346E*) VARIANT="A346E" ;;'
+        EXTRA_BLOCKS+=$'\n  *A346M*) VARIANT="A346M" ;;'
+        EXTRA_BLOCKS+=$'\n  *A3460*) VARIANT="A3460" ;;'
+        EXTRA_BLOCKS+=$'\n  *) abort "Unsupported A34 model: $MODEL_PROP" ;;'
+        EXTRA_BLOCKS+=$'\nesac;'
+        EXTRA_BLOCKS+=$'\nui_print "Detected Galaxy A34 variant: $VARIANT";'
+        EXTRA_BLOCKS+=$'\nui_print "Installing $VARIANT DTBO...";\nupdate_zip ${VARIANT}_dtbo.img $(find_block dtbo);'
+        EXTRA_BLOCKS+=$'\nui_print "Installing $VARIANT VBMeta...";\nupdate_zip ${VARIANT}_vbmeta.img $(find_block vbmeta);'
+        EXTRA_BLOCKS+=$'\nui_print "Installing $VARIANT Camera VPU 1-3...";'
+        EXTRA_BLOCKS+=$'\nupdate_zip ${VARIANT}_cam_vpu1-verified.img $(find_block cam_vpu1);'
+        EXTRA_BLOCKS+=$'\nupdate_zip ${VARIANT}_cam_vpu2-verified.img $(find_block cam_vpu2);'
+        EXTRA_BLOCKS+=$'\nupdate_zip ${VARIANT}_cam_vpu3-verified.img $(find_block cam_vpu3);'
+        EXTRA_BLOCKS+=$'\nui_print "Installing $VARIANT Audio DSP & SCP...";'
+        EXTRA_BLOCKS+=$'\nupdate_zip ${VARIANT}_audio_dsp-verified.img $(find_block audio_dsp);'
+        EXTRA_BLOCKS+=$'\nupdate_zip ${VARIANT}_scp-verified.img $(find_block scp1);'
     fi
-
-    for VPU in cam_vpu1 cam_vpu2 cam_vpu3; do
-        if [[ -f "${ZIP_BUILD_DIR}/${VPU}-verified.img" ]]; then
-            EXTRA_BLOCKS+=$'\nui_print "Installing '${VPU}'...";\nupdate_zip '${VPU}'-verified.img $(find_block '${VPU}');'
-        fi
-    done
 
     if [[ -f "${ZIP_BUILD_DIR}/up_param.bin" ]]; then
         EXTRA_BLOCKS+=$'\nui_print "Installing Param...";\nupdate_zip up_param.bin $(find_block up_param);'

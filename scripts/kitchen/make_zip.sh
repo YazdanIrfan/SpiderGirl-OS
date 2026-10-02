@@ -74,6 +74,20 @@ CREATE_FLASHABLE_ZIP()
         EXTRA_BLOCKS+=$'\nui_print "Installing DTBO...";\nupdate_zip dtbo.img $(find_block dtbo);'
     fi
 
+    if [[ -f "${ZIP_BUILD_DIR}/vendor_boot.img" ]]; then
+        EXTRA_BLOCKS+=$'\nui_print "Installing Vendor Boot...";\nupdate_zip vendor_boot.img $(find_block vendor_boot);'
+    fi
+
+    if [[ -f "${ZIP_BUILD_DIR}/vbmeta.img" ]]; then
+        EXTRA_BLOCKS+=$'\nui_print "Installing Patched VBMeta...";\nupdate_zip vbmeta.img $(find_block vbmeta);'
+    fi
+
+    for VPU in cam_vpu1 cam_vpu2 cam_vpu3; do
+        if [[ -f "${ZIP_BUILD_DIR}/${VPU}-verified.img" ]]; then
+            EXTRA_BLOCKS+=$'\nui_print "Installing '${VPU}'...";\nupdate_zip '${VPU}'-verified.img $(find_block '${VPU}');'
+        fi
+    done
+
     if [[ -f "${ZIP_BUILD_DIR}/up_param.bin" ]]; then
         EXTRA_BLOCKS+=$'\nui_print "Installing Param...";\nupdate_zip up_param.bin $(find_block up_param);'
     fi

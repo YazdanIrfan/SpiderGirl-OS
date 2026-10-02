@@ -35,9 +35,10 @@ DECOMPILE_RES=true
 
 APK_TO_DECOMPILE_RES=(
     SamsungDeviceHealthManagerService.apk
-    #wallpaper-res.apk
-    #SecSettings.apk
-    #SystemUI.apk
+    wallpaper-res.apk
+    SecSettings.apk
+    SystemUI.apk
+    product_overlay.apk
 )
 
 declare -A PATCH_CACHE

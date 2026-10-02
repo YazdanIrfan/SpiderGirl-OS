@@ -167,6 +167,13 @@ EOF
     fi
     # ]
 
+    # Extract boot.img and vendor_boot.img for kernel/module patching before AP_PACKAGE is deleted on CI
+    if [[ "$FW_TYPE" == "stock" ]]; then
+        mkdir -p "$WORK_DIR/kernel"
+        FETCH_FILE "$AP_PACKAGE" "boot.img" "$WORK_DIR/kernel" >/dev/null 2>&1 || true
+        FETCH_FILE "$AP_PACKAGE" "vendor_boot.img" "$WORK_DIR/kernel" >/dev/null 2>&1 || true
+    fi
+
     # Github runner have limited 72GB Storage only :(
     if IS_GITHUB_ACTIONS; then 
         rm -f "$AP_PACKAGE"

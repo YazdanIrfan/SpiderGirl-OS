@@ -15,8 +15,8 @@ MODEL="SM-S711U1"
 CSC="AIO"
 
 # Extra firmware which is optional
-EXTRA_MODEL="SM-S948B"
-EXTRA_CSC="EUX"
+EXTRA_MODEL="SM-S711U1"
+EXTRA_CSC="AIO"
 
 # Output
 FILESYSTEM="erofs"

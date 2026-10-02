@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # MOD_NAME="A34 5G GKI Kernel, Modules & Multi-Variant MTK Firmware"
-# MOD_AUTHOR="Fede2782, ExtremeXT"
+# MOD_AUTHOR="Fede2782, ExtremeXT, Yazdan Irfan"
 
 LOG_BEGIN "- Building A34 5G GKI Kernel, Vendor Boot & Multi-Variant Firmware"
 mkdir -p "$DIROUT"

@@ -44,7 +44,7 @@ mv -f "$TMP_DIR/new-boot.img" "$DIROUT/boot.img"
 rm -rf "$TMP_DIR"
 LOG_INFO "Repacked boot.img with UN1CA GKI kernel."
 
-# 2. Patch vendor_boot.img with log_store.ko & smcdsd_panel.ko (Works on all A34 variants)
+# 2. Patch vendor_boot.img with log_store.ko, smcdsd_panel.ko & first-stage fstab fixes
 if [[ ! -f "$STOCK_FW/kernel/vendor_boot.img" ]]; then
     ERROR_EXIT "Missing $STOCK_FW/kernel/vendor_boot.img (Check scripts/unpack_fw.sh)"
 fi
@@ -68,11 +68,23 @@ fi
 cp -f "$LOG_STORE_KO" "$TMP_DIR/out/ramdisk_out/lib/modules/log_store.ko"
 cp -f "$SMCDSD_PANEL_KO" "$TMP_DIR/out/ramdisk_out/lib/modules/smcdsd_panel.ko"
 
+# Patch first-stage ramdisk fstab.mt6877 so init mounts modified super.img without AVB/encryption bootloops
+find "$TMP_DIR/out/ramdisk_out" -type f -name "fstab.*" -exec sed -i \
+    -e 's/,avb=vbmeta_system//g' \
+    -e 's/,avb=vbmeta_vendor//g' \
+    -e 's/,avb=vbmeta//g' \
+    -e 's/,avb//g' \
+    -e 's/,avb_keys=[^,[:space:]]*//g' \
+    -e 's/,fileencryption=[^,[:space:]]*//g' \
+    -e 's/,metadata_encryption=[^,[:space:]]*//g' \
+    -e 's/,keydirectory=[^,[:space:]]*//g' \
+    -e 's/,encryptable=[^,[:space:]]*//g' {} +
+
 (cd "$TMP_DIR/out/ramdisk_out" && find . | LC_ALL=C sort | cpio --quiet -o -H newc) | lz4 -l -12 --favor-decSpeed > "$TMP_DIR/out/vendor_ramdisk00"
 eval "python3 \"$PREBUILTS/android-tools/mkbootimg\" $MKBOOTIMG_ARGS --vendor_boot \"$TMP_DIR/vendor_boot.img\"" || ERROR_EXIT "mkbootimg failed for vendor_boot.img"
 mv -f "$TMP_DIR/vendor_boot.img" "$DIROUT/vendor_boot.img"
 rm -rf "$TMP_DIR"
-LOG_INFO "Repacked vendor_boot.img with patched kernel modules."
+LOG_INFO "Repacked vendor_boot.img with patched kernel modules and fstab."
 
 # 3. Download Signed MTK Firmware & Patched VBMeta for ALL 4 Variants (A346B, A346E, A346M, A3460)
 A346B_FIRMWARE_URL="https://github.com/UN1CA/proprietary_vendor_samsung_a34x/releases/download/EYI7-firmware/A346BXXUBEYI7_mtk_fw.tar.md5"
